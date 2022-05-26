@@ -10,6 +10,7 @@ using System.Data.OleDb;
 using System.Collections;
 using MySql.Data;
 using MySql.Data.MySqlClient;
+using System.Diagnostics;
 
 namespace WindowsFormsApplication35
 {
@@ -19,7 +20,7 @@ namespace WindowsFormsApplication35
         List<PictureBox> items = new List<PictureBox>();
         Point[] points = new Point[50];
         Graphics gObject;
-        Graphics gText;
+        
 
         public Form1()
         {
@@ -194,7 +195,7 @@ namespace WindowsFormsApplication35
                        Mesafe.ToString());
                         baglanti.Close();
                         baglanti.Open();
-                        MySqlCommand commandD = new MySqlCommand("INSERT INTO mesafeler(IDsehir1, IDsehir2, Mesafe) VALUES(" + ID1 + ", " + ID2 + ", " + Mesafe + ")", baglanti);
+                        MySqlCommand commandD = new MySqlCommand("INSERT INTO mesafeler(IDsehir1, IDsehir2, Mesafe, status) VALUES(" + ID1 + ", " + ID2 + ", " + Mesafe + ","+0+")", baglanti);
                         commandD.ExecuteNonQuery();
 
 
@@ -383,17 +384,73 @@ namespace WindowsFormsApplication35
             }
             
         }
-        public void dijkstra(int hedef,int depo=1)
+        public void dijkstra(int hedef,int source)
         {
+            baglanti.Close();
+            int targets = 0;
+            int sources = 0;
+            int id = 0;
+            int shortestmesafe = 500;
+            int[] distance = new int[items.Count()];
+            bool[] shortestPathTreeSet = new bool[items.Count()];
+            for (int i = 0; i < items.Count(); ++i)
+            {
+                distance[i] = int.MaxValue;
+                shortestPathTreeSet[i] = false;
+            }
+            distance[source] = 0;
+          
+           
+          
+            baglanti.Open();
+            MySqlCommand command = new MySqlCommand("SELECT ID,IDsehir2,IDsehir1,Mesafe FROM mesafeler WHERE IDsehir1=" + (source+1) +" AND status="+0+"", baglanti);
 
+            //Okuyucu nesnesi (Kamyon)
+            MySqlDataReader Okuyucu = command.ExecuteReader();
+            //Bilgiler Sayfaya yükleniyor
+           
+            while (Okuyucu.Read())
+            {
+                Mesafe = Convert.ToInt32(Okuyucu["Mesafe"]);
+                targets = Convert.ToInt32(Okuyucu["IDsehir2"]);
+                sources = Convert.ToInt32(Okuyucu["IDsehir1"]);
+                id = Convert.ToInt32(Okuyucu["ID"]);
+                distance[targets-1] = Mesafe;
+                if(Mesafe<shortestmesafe)
+                {
+                    shortestmesafe = Mesafe;
+                }
+            }
+            baglanti.Close();
+            baglanti.Open();
+            for (int i = 0; i < items.Count(); ++i)
+            {
+                MessageBox.Show(i.ToString() + ". noktaya mesafe" + distance[i].ToString());
+            }
+            for (int i = 1; i < items.Count(); ++i)
+            {
+                if (distance[i] == shortestmesafe)
+                {
+                    MySqlCommand commandD = new MySqlCommand("UPDATE mesafeler set status='" + 1 + "'where mesafe='" + shortestmesafe + "'", baglanti);
+                    commandD.ExecuteNonQuery();
+                    gObject = pictureBox2.CreateGraphics();
+                    Brush blue = new SolidBrush(Color.Blue);
+                    Pen bluePen = new Pen(blue, 4);
+                    gObject.DrawLine(bluePen, points[source], points[i]);
+                    source = i;
+                    dijkstra(0, source);
+
+
+                }
+            }
+            baglanti.Close();
+           
         }
-
         private void button6_Click(object sender, EventArgs e)
         {
-            for (int i = 2; i <= items.Count; i++)
-            {
-                dijkstra(i);
-            }
+           
+                dijkstra(0,0);
+            
         }
 
         private void button8_Click(object sender, EventArgs e)
