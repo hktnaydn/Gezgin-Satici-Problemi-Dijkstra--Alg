@@ -18,19 +18,29 @@ namespace WindowsFormsApplication35
     {
         public static int Mesafe;
         List<PictureBox> items = new List<PictureBox>();
-        Point[] points = new Point[50];
+        Point[] points = new Point[10];
         Graphics gObject;
-        
-
+        public static int endusukmaliyet = int.MaxValue;
+        public static string endusukmaliyetstring = null;
+        public string enkisaguzergah = null;
+        public int RastgeleSayi = 0;
+        public int[] distance;
+        public bool[] shortestPathTreeSet;
+        public string sondurak;
+        Bitmap CurrentParticle;
+       
         public Form1()
         {
             InitializeComponent();
+            pictureBox2.AllowDrop = true;
+            PictureBox_Particle3.AllowDrop = true;
         }
         public static MySqlConnectionStringBuilder build = new MySqlConnectionStringBuilder();
         public static MySqlConnection baglanti;
         int SehirSayisi = 0;
         Random Rastgele = new Random();
         int ToplamMesafe = 0;
+
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -43,16 +53,16 @@ namespace WindowsFormsApplication35
 
 
         }
-        
+
         private void MakePicturebox(MouseEventArgs e)
         {
-            
+
             int X, Y;
             X = e.X;
             Y = e.Y;
             PictureBox point = new PictureBox();
-            point.Height = 25;
-            point.Width = 25;
+            point.Height = 15;
+            point.Width = 15;
             if (items.Count() > 0)
             {
                 System.Drawing.Drawing2D.GraphicsPath gp = new System.Drawing.Drawing2D.GraphicsPath();
@@ -65,22 +75,24 @@ namespace WindowsFormsApplication35
                     if (items.Count() == i)
                     {
                         points[i] = new Point(X, Y);
+                       
                     }
                 }
-                
+
             }
-            
+
             if (items.Count() == 0)
             {
                 points[0] = new Point(X, Y);
             }
             point.BackColor = Color.Black;
-            point.Location = new Point(X, Y); 
+            point.Location = new Point(X, Y);
             items.Add(point);
+            
             this.Controls.Add(point);
             point.BringToFront();
-           
-          }
+
+        }
         private void MakeText(PaintEventArgs e)
         {
             Font drawFont = new Font("Arial", 32);
@@ -99,17 +111,17 @@ namespace WindowsFormsApplication35
 
         private void pictureBox2_MouseUp(object sender, MouseEventArgs e)
         {
-           
+
             if (checkBox1.Checked == true && textBox3.Text != "")
             {
-                
+
                 int X, Y;
                 string SehirAdi;
-                int SehirNo;
+      
                 X = e.X;
                 Y = e.Y;
                 SehirAdi = textBox3.Text;
-                
+
                 BilgileriKaydet(SehirAdi, X, Y);
 
             }
@@ -123,7 +135,7 @@ namespace WindowsFormsApplication35
             MySqlCommand command = new MySqlCommand("INSERT INTO Konumlar(SehirAdi, X, Y) VALUES ('" +
            SehirAdi + "'," + X + "," + Y + ")", baglanti);
             MySqlDataReader reader = command.ExecuteReader();
-            
+
             baglanti.Close();
             BilgileriOku();
         }
@@ -133,7 +145,7 @@ namespace WindowsFormsApplication35
             // Bağlantı adresini tanımlama (Köprü kuruluyor)
             baglanti.Open();
             //Sorgu (Emir Listesi)
-           
+
             MySqlCommand command = new MySqlCommand("SELECT * FROM Konumlar", baglanti);
 
             //Okuyucu nesnesi (Kamyon)
@@ -157,7 +169,7 @@ namespace WindowsFormsApplication35
             //Veritabanından Diziye okutuyoruz.
             string[,] Sehirler = new string[100, 4];
             // Bağlantı adresini tanımlama (Köprü kuruluyor)
-                baglanti.Open();
+            baglanti.Open();
             //Sorgu (Emir Listesi)
             MySqlCommand command = new MySqlCommand("SELECT * FROM Konumlar", baglanti);
             //Okuyucu nesnesi (Kamyon)
@@ -189,13 +201,23 @@ namespace WindowsFormsApplication35
                     int Y2 = Convert.ToInt16(Sehirler[k, 3]);
                     Mesafe = Convert.ToInt16(Math.Sqrt((Y2 - Y1) * (Y2 - Y1) +
                    (X2 - X1) * (X2 - X1)));
-                    if (Mesafe != 0 && Mesafe<200)
+                    if (Mesafe < 100)
+                    {
+                        // MessageBox.Show(Mesafe.ToString());
+                        Mesafe = Mesafe * 2;
+                    }
+                    else
+                    {
+                        //  MessageBox.Show(Mesafe.ToString());
+                        Mesafe = Mesafe * 4;
+                    }
+                    if (Mesafe != 0)
                     {
                         listBox2.Items.Add(Sehir1 + "," + Sehir2 + "=" +
                        Mesafe.ToString());
                         baglanti.Close();
                         baglanti.Open();
-                        MySqlCommand commandD = new MySqlCommand("INSERT INTO mesafeler(IDsehir1, IDsehir2, Mesafe, status) VALUES(" + ID1 + ", " + ID2 + ", " + Mesafe + ","+0+")", baglanti);
+                        MySqlCommand commandD = new MySqlCommand("INSERT INTO mesafeler(IDsehir1, IDsehir2, Mesafe, status) VALUES(" + ID1 + ", " + ID2 + ", " + Mesafe + "," + 0 + ")", baglanti);
                         commandD.ExecuteNonQuery();
 
 
@@ -209,7 +231,7 @@ namespace WindowsFormsApplication35
 
         private void button2_Click(object sender, EventArgs e)
         {
-            
+
             // Bağlantı adresini tanımlama (Köprü kuruluyor)
             baglanti.Open();
             //Sorgu (Emir Listesi)
@@ -235,15 +257,113 @@ namespace WindowsFormsApplication35
             //string A ,B;
             string YeniKromozom = null;
 
-            string EskiKromozom = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16";
+
+            string EskiKromozom = null;
+            Boolean varmi = false;
+            switch (items.Count())
+            {
+                case 3:
+                    EskiKromozom = "1,2,3";
+                    break;
+
+                case 4:
+                    EskiKromozom = "1,2,3,4";
+                    break;
+
+                case 5:
+                    EskiKromozom = "1,2,3,4,5";
+                    break;
+
+                case 6:
+                    EskiKromozom = "1,2,3,4,5,6";
+                    break;
+
+                case 7:
+                    EskiKromozom = "1,2,3,4,5,6,7";
+                    break;
+
+                case 8:
+                    EskiKromozom = "1,2,3,4,5,6,7,8";
+                    break;
+
+                default:
+                    EskiKromozom = "1,2";
+                    break;
+
+
+            }
+            int permutasyon = faktoriyel(items.Count() - 1);
             //Kaç tane ilk kromozom oluşturacaksa o kadar dönecek
-            for (int i = 0; i < 25; i++)
+            for (int i = 0; i < permutasyon; i++)
             {
                 YeniKromozom = YeniKromozomOlustur(EskiKromozom);
-                listBox3.Items.Add(YeniKromozom + "=" + ToplamMesafe);
-                EskiKromozom = YeniKromozom;
-            }
+                if (ToplamMesafe != 0)
+                {
+                    for (int k = 0; k < listBox3.Items.Count; k++)
+                    {
+                        if (listBox3.Items[k].ToString().Contains(YeniKromozom + "=" + ToplamMesafe))
+                        {
+                            i--;
+                            varmi = true;
+                            break;
+                        }
+                    }
+                    if (varmi == false)
+                    {
+                        if (ToplamMesafe < endusukmaliyet)
+                        {
+                            endusukmaliyet = ToplamMesafe;
+                            endusukmaliyetstring = YeniKromozom + " Güzergahının Maliyeti =" + endusukmaliyet.ToString();
+                            enkisaguzergah = YeniKromozom;
+                            string[] sondurakarray = YeniKromozom.Split(',');
+                            sondurak = sondurakarray[(sondurakarray.Length-1)];
+                        }
+                        listBox3.Items.Add(YeniKromozom + "=" + ToplamMesafe);
+                    }
 
+                }
+                else
+                {
+                    i--;
+                }
+                EskiKromozom = YeniKromozom;
+                varmi = false;
+            }
+            MessageBox.Show(endusukmaliyetstring, "En Düşük Maliyetli Güzergah");
+            textBox1.Text = endusukmaliyetstring;
+            kisaguzergah(enkisaguzergah);
+            
+            button3.Enabled = false;
+         //   ShowAnimation();
+        }
+        private void kisaguzergah(string enkisa)
+        {
+
+            string[] kisagüzergahdizisi = enkisa.Split(',');
+            ArrayList yenikisaguzergahdizisi = new ArrayList();
+            foreach (string Eleman in kisagüzergahdizisi)
+            {
+                if (Eleman != null)
+                {
+                    yenikisaguzergahdizisi.Add(Eleman);
+                }
+            }
+            for (int i = 0; i < (yenikisaguzergahdizisi.Count - 1); i++)
+            {
+                Brush blue = new SolidBrush(Color.Blue);
+                Pen bluePen = new Pen(blue, 2);
+                gObject.DrawLine(bluePen, points[i], points[i + 1]);
+
+            }
+        }
+        public int faktoriyel(int k)
+        {
+            int fakto = 1;
+            for (int i = k; i >= 2; i--)
+            {
+                fakto = i * fakto;
+            }
+            return fakto;
         }
 
         public string YeniKromozomOlustur(string EskiKromozom)
@@ -254,7 +374,7 @@ namespace WindowsFormsApplication35
             ArrayList Dizi2 = new ArrayList();
             foreach (string Eleman in Dizi1)
             {
-                if (Eleman != "")
+                if (Eleman != null)
                 {
                     Dizi2.Add(Eleman);
                 }
@@ -265,17 +385,55 @@ namespace WindowsFormsApplication35
             {
                 try
                 {
-                    int RastgeleSayi = Rastgele.Next(0, Dizi2.Count);
-                    YeniDizi = YeniDizi + Dizi2[RastgeleSayi] + ",";
-                    IDsehir1 = Convert.ToInt32(Dizi2[RastgeleSayi]);
-                    if (IDsehir2 != -1) //Ilk değer okunmazken.
+                    if (Dizi2.Count == items.Count())
                     {
-                        Mesafe = VT_IkiSehirMesafesiniOku(IDsehir1, IDsehir2);
-                     //   MessageBox.Show(Mesafe.ToString());
-                        ToplamMesafe = ToplamMesafe + Mesafe;
+                        RastgeleSayi = 0;
                     }
-                    IDsehir2 = IDsehir1;
-                    Dizi2.RemoveAt(RastgeleSayi);
+                    else
+                    {
+                        RastgeleSayi = Rastgele.Next(0, Dizi2.Count);
+                    }
+
+                    if (Dizi2.Count == items.Count())
+                    {
+                        if (RastgeleSayi == 0)
+                        {
+                            YeniDizi = YeniDizi + Dizi2[RastgeleSayi] + ",";
+                            IDsehir1 = Convert.ToInt32(Dizi2[RastgeleSayi]);
+                            if (IDsehir2 != -1) //Ilk değer okunmazken.
+                            {
+                                Mesafe = VT_IkiSehirMesafesiniOku(IDsehir1, IDsehir2);
+                                //   MessageBox.Show(Mesafe.ToString());
+                                ToplamMesafe = ToplamMesafe + Mesafe;
+                            }
+                            IDsehir2 = IDsehir1;
+                            Dizi2.RemoveAt(RastgeleSayi);
+                        }
+                        else
+                        {
+                            YeniDizi = EskiKromozom;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (Dizi2.Count == 1)
+                        { YeniDizi = YeniDizi + Dizi2[RastgeleSayi]; }
+                        else
+                        {
+                            YeniDizi = YeniDizi + Dizi2[RastgeleSayi] + ",";
+                        }
+                        IDsehir1 = Convert.ToInt32(Dizi2[RastgeleSayi]);
+                        if (IDsehir2 != -1) //Ilk değer okunmazken.
+                        {
+                            Mesafe = VT_IkiSehirMesafesiniOku(IDsehir1, IDsehir2);
+                            //   MessageBox.Show(Mesafe.ToString());
+                            ToplamMesafe = ToplamMesafe + Mesafe;
+                        }
+                        IDsehir2 = IDsehir1;
+                        Dizi2.RemoveAt(RastgeleSayi);
+                    }
+
                 }
                 catch { }
             } while (Dizi2.Count > 0);
@@ -289,7 +447,7 @@ namespace WindowsFormsApplication35
             // Bağlantı adresini tanımlama (Köprü kuruluyor)
             baglanti.Open();
             //Sorgu (Emir Listesi)
-          
+
             MySqlCommand command = new MySqlCommand("SELECT Mesafe FROM mesafeler WHERE IDsehir1=" + IDsehir1 + " AND IDsehir2=" + IDsehir2 + "", baglanti);
 
             //Okuyucu nesnesi (Kamyon)
@@ -301,26 +459,21 @@ namespace WindowsFormsApplication35
             }
             baglanti.Close();
             Okuyucu.Close();
-      //     MessageBox.Show("İki Nokta arasındaki Mesafe"+Mesafe.ToString());
+            //     MessageBox.Show("İki Nokta arasındaki Mesafe"+Mesafe.ToString());
             return Mesafe;
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
         {
-            Point point = pictureBox2.PointToClient(Cursor.Position);
-            Bitmap bmp = new Bitmap(pictureBox2.Image);
-            Graphics g = Graphics.FromImage(bmp);
-            g.DrawString(textBox1.Text, new Font("Verdava", 10,
-            FontStyle.Regular), new SolidBrush(Color.Black), point.X, point.Y);
-            pictureBox2.Image = bmp;
+
         }
 
         private void pictureBox2_MouseClick(object sender, MouseEventArgs e)
         {
             if (checkBox1.Checked == true && textBox3.Text != "")
-            { 
+            {
                 MakePicturebox(e);
-                
+
 
             }
             else
@@ -339,7 +492,7 @@ namespace WindowsFormsApplication35
             //Bilgiler Diziye yükleniyor
             listBox1.Items.Clear();
             listBox2.Items.Clear();
-           
+
             baglanti.Close();
             baglanti.Open();
             //Sorgu (Emir Listesi)
@@ -347,16 +500,21 @@ namespace WindowsFormsApplication35
             //Okuyucu nesnesi (Kamyon)
             commandd.ExecuteReader();
             baglanti.Close();
-            
+
 
         }
 
-   
+
 
         private void button7_Click(object sender, EventArgs e)
         {
-
-            
+            shortestPathTreeSet=new bool[items.Count()];
+            distance = new int[items.Count()];
+            for (int i = 0; i < items.Count(); ++i)
+            {
+                distance[i] = int.MaxValue;
+                shortestPathTreeSet[i] = false;
+            }
             gObject = pictureBox2.CreateGraphics();
             Brush red = new SolidBrush(Color.Red);
             Brush blue = new SolidBrush(Color.Blue);
@@ -365,58 +523,59 @@ namespace WindowsFormsApplication35
             MessageBox.Show(items.Count().ToString());
             for (int i = 0; i < items.Count(); i++)
             {
-                    for (int j = 0; j < items.Count(); j++)
-                    {
+                for (int j = 0; j < items.Count(); j++)
+                {
                     int ikinoktaarası = 0;
                     ikinoktaarası = VT_IkiSehirMesafesiniOku((i + 1), (j + 1));
-                    MessageBox.Show(i.ToString() +"  -  "+ j.ToString()+"=Mesafesi="+ikinoktaarası.ToString());
-                            if(ikinoktaarası <200 && ikinoktaarası!=0)
-                            {
-                                gObject.DrawLine(redPen, points[i], points[j]);
-                                ikinoktaarası = 0;
-                            }
-                            else
-                            {
-                            continue;
-                            }
-                        
+                    //  MessageBox.Show(i.ToString() +"  -  "+ j.ToString()+"=Mesafesi="+ikinoktaarası.ToString());
+                    if (ikinoktaarası != 0)
+                    {
+                        gObject.DrawLine(redPen, points[i], points[j]);
+                        ikinoktaarası = 0;
                     }
+                    else
+                    {
+                        continue;
+                    }
+
+                }
             }
-            
+            button3.Enabled = true;
+
         }
-        public void dijkstra(int hedef,int source)
+        public int shortestmesafe = int.MaxValue;
+        public void dijkstra(int hedef, int source, int noktasayi)
         {
             baglanti.Close();
+            if ((noktasayi - 1) == items.Count())
+            {
+                MessageBox.Show("Toplam Maliyet =" + ToplamMesafe.ToString());
+                return;
+            }
             int targets = 0;
             int sources = 0;
             int id = 0;
-            int shortestmesafe = 500;
-            int[] distance = new int[items.Count()];
-            bool[] shortestPathTreeSet = new bool[items.Count()];
-            for (int i = 0; i < items.Count(); ++i)
-            {
-                distance[i] = int.MaxValue;
-                shortestPathTreeSet[i] = false;
-            }
-            distance[source] = 0;
-          
            
           
+            distance[source] = 0;
+
+
+
             baglanti.Open();
-            MySqlCommand command = new MySqlCommand("SELECT ID,IDsehir2,IDsehir1,Mesafe FROM mesafeler WHERE IDsehir1=" + (source+1) +" AND status="+0+"", baglanti);
+            MySqlCommand command = new MySqlCommand("SELECT ID,IDsehir2,IDsehir1,Mesafe FROM mesafeler WHERE IDsehir1=" + (source + 1) + " AND status=" + 0 + "", baglanti);
 
             //Okuyucu nesnesi (Kamyon)
             MySqlDataReader Okuyucu = command.ExecuteReader();
             //Bilgiler Sayfaya yükleniyor
-           
+
             while (Okuyucu.Read())
             {
                 Mesafe = Convert.ToInt32(Okuyucu["Mesafe"]);
                 targets = Convert.ToInt32(Okuyucu["IDsehir2"]);
                 sources = Convert.ToInt32(Okuyucu["IDsehir1"]);
                 id = Convert.ToInt32(Okuyucu["ID"]);
-                distance[targets-1] = Mesafe;
-                if(Mesafe<shortestmesafe)
+                distance[targets - 1] = Mesafe;
+                if (Mesafe < shortestmesafe)
                 {
                     shortestmesafe = Mesafe;
                 }
@@ -425,9 +584,9 @@ namespace WindowsFormsApplication35
             baglanti.Open();
             for (int i = 0; i < items.Count(); ++i)
             {
-                MessageBox.Show(i.ToString() + ". noktaya mesafe" + distance[i].ToString());
+                  MessageBox.Show(i.ToString() + ". noktaya mesafe" + distance[i].ToString());
             }
-            for (int i = 1; i < items.Count(); ++i)
+            for (int i = 0; i < items.Count(); ++i)
             {
                 if (distance[i] == shortestmesafe)
                 {
@@ -438,29 +597,120 @@ namespace WindowsFormsApplication35
                     Pen bluePen = new Pen(blue, 4);
                     gObject.DrawLine(bluePen, points[source], points[i]);
                     source = i;
-                    dijkstra(0, source);
+                    ToplamMesafe = ToplamMesafe + shortestmesafe;
+                    noktasayi++;
+                    dijkstra(0, source, noktasayi);
 
 
                 }
             }
             baglanti.Close();
-           
+
         }
         private void button6_Click(object sender, EventArgs e)
         {
-           
-                dijkstra(0,0);
-            
+
+            dijkstra(0, (Convert.ToInt32(sondurak)-1), 1);
+
         }
 
         private void button8_Click(object sender, EventArgs e)
         {
-            VT_IkiSehirMesafesiniOku(1,2);
+            VT_IkiSehirMesafesiniOku(1, 2);
         }
 
         private void pictureBox2_Paint(object sender, PaintEventArgs e)
         {
-           
+
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+          
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+
+        }
+        private void ShowAnimation()
+        {
+
+            Bitmap original = new Bitmap(pictureBox2.Image);
+            Bitmap background = new Bitmap(pictureBox2.Image);
+            Bitmap temporal = new Bitmap(pictureBox2.Image);
+            Bitmap animationParticle = new Bitmap(CurrentParticle, new Size((int)(CurrentParticle.Width * 0.1), (int)(CurrentParticle.Height * 0.1)));
+
+            int xCorrection = animationParticle.Width / 2, yCorrection = animationParticle.Height / 2;
+
+
+            for (int i = 0; i < (items.Count - 1); ++i)
+            {
+
+
+                //   Graphics.FromImage(background).DrawLine(new Pen(Color.FromArgb(54, 54, 54), 8), points[i], points[i + 1]);
+                gObject.DrawLine(new Pen(Color.FromArgb(54, 54, 54), 4), points[i], points[i + 1]);
+                for (int j = 0; j < points.Length; ++j)
+                {
+                    gObject.DrawImage(animationParticle, new Point(points[j].X - xCorrection, points[j].Y - yCorrection));
+
+
+                }
+            }
+
+        }
+        private List<Point> GetPoints(Vertex origin, Vertex destination)
+        {
+            List<Point> path = new List<Point>();
+
+            foreach (Edge edge in origin.GetEdges())
+            {
+                if (edge.Destination.ID == destination.ID)
+                {
+                    path.Add(edge.Path[0]);
+
+                    for (int i = 0; i < edge.Path.Count; i += 5)
+                    {
+                        path.Add(edge.Path[i]);
+                    }
+
+                    path.Add(edge.Path.Last());
+                }
+            }
+
+            return path;
+        }
+
+        private void pictureBox2_DragDrop(object sender, DragEventArgs e)
+        {
+            this.CurrentParticle = (Bitmap)e.Data.GetData(DataFormats.Bitmap, true);
+
+            MessageBox.Show("Resim yerleştirildi");
+        }
+
+        private void PictureBox_Particle3_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+                PictureBox_Particle3.DoDragDrop(PictureBox_Particle3.Image, DragDropEffects.Copy);
+        }
+
+        private void PictureBox_Particle3_Paint(object sender, PaintEventArgs e)
+        {
+            ControlPaint.DrawBorder(e.Graphics, PictureBox_Particle3.ClientRectangle, Color.FromArgb(54, 54, 54), ButtonBorderStyle.Dotted);
+
+        }
+
+        private void pictureBox2_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.Bitmap) && (e.AllowedEffect & DragDropEffects.Copy) != 0)
+                e.Effect = DragDropEffects.Copy;
+            else
+                e.Effect = DragDropEffects.None;
+        }
+
+        private void button2_Click_1(object sender, EventArgs e)
+        {
+            
         }
     }
 }
