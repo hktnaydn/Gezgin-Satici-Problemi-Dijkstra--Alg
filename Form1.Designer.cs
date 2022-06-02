@@ -44,6 +44,7 @@
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.button2 = new System.Windows.Forms.Button();
             this.PictureBox_Particle3 = new System.Windows.Forms.PictureBox();
+            this.richTextBox1 = new System.Windows.Forms.RichTextBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.PictureBox_Particle3)).BeginInit();
             this.SuspendLayout();
@@ -180,7 +181,7 @@
             // 
             // button2
             // 
-            this.button2.Location = new System.Drawing.Point(882, 579);
+            this.button2.Location = new System.Drawing.Point(871, 522);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(75, 23);
             this.button2.TabIndex = 24;
@@ -201,11 +202,20 @@
             this.PictureBox_Particle3.Paint += new System.Windows.Forms.PaintEventHandler(this.PictureBox_Particle3_Paint);
             this.PictureBox_Particle3.MouseDown += new System.Windows.Forms.MouseEventHandler(this.PictureBox_Particle3_MouseDown);
             // 
+            // richTextBox1
+            // 
+            this.richTextBox1.Location = new System.Drawing.Point(846, 552);
+            this.richTextBox1.Name = "richTextBox1";
+            this.richTextBox1.Size = new System.Drawing.Size(225, 203);
+            this.richTextBox1.TabIndex = 26;
+            this.richTextBox1.Text = "";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1378, 727);
+            this.ClientSize = new System.Drawing.Size(1378, 861);
+            this.Controls.Add(this.richTextBox1);
             this.Controls.Add(this.PictureBox_Particle3);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.textBox1);
@@ -242,11 +252,12 @@
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.Button button7;
-        private System.Windows.Forms.PictureBox pictureBox2;
         private System.Windows.Forms.Button button6;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.PictureBox PictureBox_Particle3;
+        private System.Windows.Forms.RichTextBox richTextBox1;
+        public System.Windows.Forms.PictureBox pictureBox2;
     }
 }
 

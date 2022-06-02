@@ -18,8 +18,14 @@ namespace WindowsFormsApplication35
     {
         public static int Mesafe;
         List<PictureBox> items = new List<PictureBox>();
-        Point[] points = new Point[10];
-        Graphics gObject;
+
+
+        public static Point[] points = new Point[10];
+
+
+        public static Graphics gObject;
+
+
         public static int endusukmaliyet = int.MaxValue;
         public static string endusukmaliyetstring = null;
         public string enkisaguzergah = null;
@@ -28,7 +34,7 @@ namespace WindowsFormsApplication35
         public bool[] shortestPathTreeSet;
         public string sondurak;
         Bitmap CurrentParticle;
-       
+        DirectedWeightedGraph g = new DirectedWeightedGraph();
         public Form1()
         {
             InitializeComponent();
@@ -40,7 +46,7 @@ namespace WindowsFormsApplication35
         int SehirSayisi = 0;
         Random Rastgele = new Random();
         int ToplamMesafe = 0;
-
+        
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -49,7 +55,23 @@ namespace WindowsFormsApplication35
             build.Database = "kuryedatabase";
             build.Password = "safranbolu78";
             baglanti = new MySqlConnection(build.ToString());
-            BilgileriOku(); baglanti.Close();
+            baglanti.Open();
+            //Sorgu (Emir Listesi)
+            MySqlCommand command = new MySqlCommand("TRUNCATE TABLE konumlar", baglanti);
+            //Okuyucu nesnesi (Kamyon)
+            MySqlDataReader Okuyucu = command.ExecuteReader();
+            //Bilgiler Diziye yükleniyor
+            listBox1.Items.Clear();
+            listBox2.Items.Clear();
+
+            baglanti.Close();
+            baglanti.Open();
+            //Sorgu (Emir Listesi)
+            MySqlCommand commandd = new MySqlCommand("TRUNCATE TABLE mesafeler", baglanti);
+            //Okuyucu nesnesi (Kamyon)
+            commandd.ExecuteReader();
+            baglanti.Close();
+            
 
 
         }
@@ -75,7 +97,7 @@ namespace WindowsFormsApplication35
                     if (items.Count() == i)
                     {
                         points[i] = new Point(X, Y);
-                       
+                      
                     }
                 }
 
@@ -84,6 +106,8 @@ namespace WindowsFormsApplication35
             if (items.Count() == 0)
             {
                 points[0] = new Point(X, Y);
+                
+
             }
             point.BackColor = Color.Black;
             point.Location = new Point(X, Y);
@@ -150,6 +174,7 @@ namespace WindowsFormsApplication35
 
             //Okuyucu nesnesi (Kamyon)
             MySqlDataReader Okuyucu = command.ExecuteReader();
+            string noktaadi="armut";
             //Bilgiler Sayfaya yükleniyor
             listBox1.Items.Clear();
             while (Okuyucu.Read())
@@ -157,7 +182,11 @@ namespace WindowsFormsApplication35
                 listBox1.Items.Add(Okuyucu["ID"].ToString() + "," +
                Okuyucu["SehirAdi"].ToString() + "," + Okuyucu["X"].ToString() + "," +
                Okuyucu["Y"].ToString());
+                 noktaadi = Okuyucu["SehirAdi"].ToString();
+
+
             }
+            g.InsertVertex(noktaadi);
             checkBox1.Checked = false;
             baglanti.Close();
             Okuyucu.Close();
@@ -206,10 +235,17 @@ namespace WindowsFormsApplication35
                         // MessageBox.Show(Mesafe.ToString());
                         Mesafe = Mesafe * 2;
                     }
-                    else
+                    else if(Mesafe <200)
                     {
                         //  MessageBox.Show(Mesafe.ToString());
                         Mesafe = Mesafe * 4;
+                    }
+                    else if(Mesafe<300)
+                    {
+                        {
+                            //  MessageBox.Show(Mesafe.ToString());
+                            Mesafe = Mesafe * 6;
+                        }
                     }
                     if (Mesafe != 0)
                     {
@@ -219,6 +255,7 @@ namespace WindowsFormsApplication35
                         baglanti.Open();
                         MySqlCommand commandD = new MySqlCommand("INSERT INTO mesafeler(IDsehir1, IDsehir2, Mesafe, status) VALUES(" + ID1 + ", " + ID2 + ", " + Mesafe + "," + 0 + ")", baglanti);
                         commandD.ExecuteNonQuery();
+                        g.InsertEdge(Sehir1, Sehir2, Mesafe);
 
 
                     }
@@ -460,6 +497,7 @@ namespace WindowsFormsApplication35
             baglanti.Close();
             Okuyucu.Close();
             //     MessageBox.Show("İki Nokta arasındaki Mesafe"+Mesafe.ToString());
+           
             return Mesafe;
         }
 
@@ -520,7 +558,7 @@ namespace WindowsFormsApplication35
             Brush blue = new SolidBrush(Color.Blue);
             Pen redPen = new Pen(red, 4);
             Pen bluePen = new Pen(blue, 4);
-            MessageBox.Show(items.Count().ToString());
+       
             for (int i = 0; i < items.Count(); i++)
             {
                 for (int j = 0; j < items.Count(); j++)
@@ -610,8 +648,12 @@ namespace WindowsFormsApplication35
         private void button6_Click(object sender, EventArgs e)
         {
 
-            dijkstra(0, (Convert.ToInt32(sondurak)-1), 1);
+            //  dijkstra(0, (Convert.ToInt32(sondurak)-1), 1);
+            g.getObject = gObject;
+            g.getpoin = points;
 
+            g.FindPaths(sondurak);
+            
         }
 
         private void button8_Click(object sender, EventArgs e)
@@ -659,35 +701,14 @@ namespace WindowsFormsApplication35
             }
 
         }
-        private List<Point> GetPoints(Vertex origin, Vertex destination)
-        {
-            List<Point> path = new List<Point>();
-
-            foreach (Edge edge in origin.GetEdges())
-            {
-                if (edge.Destination.ID == destination.ID)
-                {
-                    path.Add(edge.Path[0]);
-
-                    for (int i = 0; i < edge.Path.Count; i += 5)
-                    {
-                        path.Add(edge.Path[i]);
-                    }
-
-                    path.Add(edge.Path.Last());
-                }
-            }
-
-            return path;
-        }
-
+     
         private void pictureBox2_DragDrop(object sender, DragEventArgs e)
         {
             this.CurrentParticle = (Bitmap)e.Data.GetData(DataFormats.Bitmap, true);
 
             MessageBox.Show("Resim yerleştirildi");
         }
-
+      
         private void PictureBox_Particle3_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
@@ -710,7 +731,23 @@ namespace WindowsFormsApplication35
 
         private void button2_Click_1(object sender, EventArgs e)
         {
-            
+            int [,] matris=g.matrix();
+
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    richTextBox1.AppendText(matris[i, j].ToString()+"\t");
+                }
+                richTextBox1.AppendText("\n");
+            }
+        }
+        public void cizgicek(int i, int j)
+        {
+            Brush black = new SolidBrush(Color.Black);
+            Pen redPen = new Pen(black, 4);
+            gObject.DrawLine(redPen, points[i], points[j]);
+
         }
     }
 }
